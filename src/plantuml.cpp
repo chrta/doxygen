@@ -24,6 +24,20 @@
 
 static const int maxCmdLine = 40960;
 
+static void executeEpsToPdf(const char *baseName)
+{
+    QCString epstopdfArgs(maxCmdLine);
+    epstopdfArgs.sprintf("\"%s.eps\" --outfile=\"%s.pdf\"",baseName,baseName);
+    portable_sysTimerStart();
+    int exitCode;
+    if ((exitCode=portable_system("epstopdf",epstopdfArgs))!=0)
+    {
+      err("Problems running epstopdf. Check your TeX installation! Exit code: %d\n",exitCode);
+    }
+    portable_sysTimerStop();
+}
+
+
 QCString writePlantUMLSource(const QCString &outDir,const QCString &fileName,const QCString &content)
 {
   QCString baseName(4096);
@@ -119,20 +133,18 @@ void generatePlantUMLOutput(const char *baseName,const char *outDir,PlantUMLOutp
 
   if ( (format==PUML_EPS) && (Config_getBool("USE_PDFLATEX")) )
   {
-    QCString epstopdfArgs(maxCmdLine);
-    epstopdfArgs.sprintf("\"%s.eps\" --outfile=\"%s.pdf\"",baseName,baseName);
-    portable_sysTimerStart();
-    if ((exitCode=portable_system("epstopdf",epstopdfArgs))!=0)
-    {
-      err("Problems running epstopdf. Check your TeX installation! Exit code: %d\n",exitCode);
-    }
-    portable_sysTimerStop();
+    executeEpsToPdf(baseName);
   }
 }
 
 void generatePlantUMLOutput(const QList<QCString> &baseNames,const char *outDir,PlantUMLOutputFormat format)
 {
     static QCString plantumlJarPath = Config_getString("PLANTUML_JAR_PATH");
+
+    if (baseNames.count() == 0)
+    {
+        return;
+    }
 
     QCString pumlExe = "java";
     QCString pumlArgs = "";
@@ -187,9 +199,10 @@ void generatePlantUMLOutput(const QList<QCString> &baseNames,const char *outDir,
     if (!plantumlJarPath.isEmpty())
     {
         //printf("*** running: %s %s outDir:%s %s\n",pumlExe.data(),pumlArgs.data(),outDir,outFile);
+        msg("Running PlantUML on generated files: \n");
         for ( it.toFirst(); (filename=it.current()); ++it )
         {
-            msg("Running PlantUML on generated file %s.pu\n",filename->data());
+            msg("\t\t%s.pu\n",filename->data());
         }
         portable_sysTimerStart();
         if ((exitCode=portable_system(pumlExe,pumlArgs,FALSE))!=0)
@@ -211,15 +224,8 @@ void generatePlantUMLOutput(const QList<QCString> &baseNames,const char *outDir,
     {
         for ( it.toFirst(); (filename=it.current()); ++it )
         {
-            QCString epstopdfArgs(maxCmdLine);
-            epstopdfArgs.sprintf("\"%s.eps\" --outfile=\"%s.pdf\"",filename->data(),filename->data());
-            portable_sysTimerStart();
-            if ((exitCode=portable_system("epstopdf",epstopdfArgs))!=0)
-            {
-              err("Problems running epstopdf. Check your TeX installation! Exit code: %d\n",exitCode);
-            }
+            executeEpsToPdf(filename->data());
         }
-      portable_sysTimerStop();
     }
 }
 
