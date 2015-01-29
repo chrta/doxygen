@@ -114,22 +114,20 @@ void generatePlantUMLOutput(const char *baseName,const char *outDir,PlantUMLOutp
   pumlArgs+=".pu\" ";
   pumlArgs+="-charset " + Config_getString("INPUT_ENCODING") + " ";
   int exitCode;
-  if (!plantumlJarPath.isEmpty())
+
+  //printf("*** running: %s %s outDir:%s %s\n",pumlExe.data(),pumlArgs.data(),outDir,outFile);
+  msg("Running PlantUML on generated file %s.pu\n",baseName);
+  portable_sysTimerStart();
+  if ((exitCode=portable_system(pumlExe,pumlArgs,FALSE))!=0)
   {
-      //printf("*** running: %s %s outDir:%s %s\n",pumlExe.data(),pumlArgs.data(),outDir,outFile);
-      msg("Running PlantUML on generated file %s.pu\n",baseName);
-      portable_sysTimerStart();
-      if ((exitCode=portable_system(pumlExe,pumlArgs,FALSE))!=0)
-      {
-        err("Problems running PlantUML. Verify that the command 'java -jar \"%splantuml.jar\" -h' works from the command line. Exit code: %d\n",
-            plantumlJarPath.data(),exitCode);
-      }
-      else if (Config_getBool("DOT_CLEANUP"))
-      {
-        QFile(QCString(baseName)+".pu").remove();
-      }
-      portable_sysTimerStop();
+    err("Problems running PlantUML. Verify that the command 'java -jar \"%splantuml.jar\" -h' works from the command line. Exit code: %d\n",
+        plantumlJarPath.data(),exitCode);
   }
+  else if (Config_getBool("DOT_CLEANUP"))
+  {
+    QFile(QCString(baseName)+".pu").remove();
+  }
+  portable_sysTimerStop();
 
   if ( (format==PUML_EPS) && (Config_getBool("USE_PDFLATEX")) )
   {
@@ -196,29 +194,26 @@ void generatePlantUMLOutput(const QList<QCString> &baseNames,const char *outDir,
 
     pumlArgs+="-charset " + Config_getString("INPUT_ENCODING") + " ";
     int exitCode;
-    if (!plantumlJarPath.isEmpty())
+    //printf("*** running: %s %s outDir:%s %s\n",pumlExe.data(),pumlArgs.data(),outDir,outFile);
+    msg("Running PlantUML on generated files: \n");
+    for ( it.toFirst(); (filename=it.current()); ++it )
     {
-        //printf("*** running: %s %s outDir:%s %s\n",pumlExe.data(),pumlArgs.data(),outDir,outFile);
-        msg("Running PlantUML on generated files: \n");
+        msg("\t\t%s.pu\n",filename->data());
+    }
+    portable_sysTimerStart();
+    if ((exitCode=portable_system(pumlExe,pumlArgs,FALSE))!=0)
+    {
+      err("Problems running PlantUML. Verify that the command 'java -jar \"%splantuml.jar\" -h' works from the command line. Exit code: %d\n",
+          plantumlJarPath.data(),exitCode);
+    }
+    else if (Config_getBool("DOT_CLEANUP"))
+    {
         for ( it.toFirst(); (filename=it.current()); ++it )
         {
-            msg("\t\t%s.pu\n",filename->data());
+            QFile(QCString(*filename)+".pu").remove();
         }
-        portable_sysTimerStart();
-        if ((exitCode=portable_system(pumlExe,pumlArgs,FALSE))!=0)
-        {
-          err("Problems running PlantUML. Verify that the command 'java -jar \"%splantuml.jar\" -h' works from the command line. Exit code: %d\n",
-              plantumlJarPath.data(),exitCode);
-        }
-        else if (Config_getBool("DOT_CLEANUP"))
-        {
-            for ( it.toFirst(); (filename=it.current()); ++it )
-            {
-                QFile(QCString(*filename)+".pu").remove();
-            }
-        }
-        portable_sysTimerStop();
     }
+    portable_sysTimerStop();
 
     if ( (format==PUML_EPS) && (Config_getBool("USE_PDFLATEX")) )
     {
