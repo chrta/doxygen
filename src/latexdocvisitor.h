@@ -34,6 +34,8 @@ class LatexDocVisitor : public DocVisitor
   public:
     LatexDocVisitor(FTextStream &t,CodeOutputInterface &ci,
                     const char *langExt,bool insideTabbing);
+
+    ~LatexDocVisitor();
     
     //--------------------------------------
     // visitor functions for leaf nodes
@@ -199,6 +201,9 @@ class LatexDocVisitor : public DocVisitor
     int m_currentColumn;
     bool m_inRowspan;
     bool m_inColspan;
+
+    /** List of plantuml files that must be generated in the destructor. */
+    QList<QCString> m_plantUmlFiles;
 };
 
 #endif
