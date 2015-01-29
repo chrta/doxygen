@@ -21,7 +21,9 @@
 
 #include "docvisitor.h"
 #include <qstack.h>
+#include <qlist.h>
 #include <qcstring.h>
+
 
 class Definition;
 class MemberDef;
@@ -34,6 +36,8 @@ class HtmlDocVisitor : public DocVisitor
 {
   public:
     HtmlDocVisitor(FTextStream &t,CodeOutputInterface &ci,Definition *ctx);
+
+    virtual ~HtmlDocVisitor();
     
     //--------------------------------------
     // visitor functions for leaf nodes
@@ -172,6 +176,8 @@ class HtmlDocVisitor : public DocVisitor
     QStack<bool> m_enabled;
     Definition *m_ctx;
     QCString m_langExt;
+    /** List of plantuml files that must be generated in the destructor. */
+    QList<QCString> m_plantUmlFiles;
 };
 
 #endif

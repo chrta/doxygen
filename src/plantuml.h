@@ -16,6 +16,8 @@
 #ifndef PLANTUML_H
 #define PLANTUML_H
 
+#include <qlist.h>
+
 class QCString;
 
 /** Plant UML output image formats */
@@ -35,6 +37,8 @@ QCString writePlantUMLSource(const QCString &outDir,const QCString &fileName,con
  *  @param[in] format   the image format to generate.
  */
 void generatePlantUMLOutput(const char *baseName,const char *outDir,PlantUMLOutputFormat format);
+
+void generatePlantUMLOutput(const QList<QCString> &baseNames,const char *outDir,PlantUMLOutputFormat format);
 
 #endif
 

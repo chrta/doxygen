@@ -19,6 +19,8 @@
 #include "message.h"
 
 #include <qdir.h>
+#include <qlist.h>
+
 
 static const int maxCmdLine = 40960;
 
@@ -98,19 +100,23 @@ void generatePlantUMLOutput(const char *baseName,const char *outDir,PlantUMLOutp
   pumlArgs+=".pu\" ";
   pumlArgs+="-charset " + Config_getString("INPUT_ENCODING") + " ";
   int exitCode;
-  //printf("*** running: %s %s outDir:%s %s\n",pumlExe.data(),pumlArgs.data(),outDir,outFile);
-  msg("Running PlantUML on generated file %s.pu\n",baseName);
-  portable_sysTimerStart();
-  if ((exitCode=portable_system(pumlExe,pumlArgs,FALSE))!=0)
+  if (!plantumlJarPath.isEmpty())
   {
-    err("Problems running PlantUML. Verify that the command 'java -jar \"%splantuml.jar\" -h' works from the command line. Exit code: %d\n",
-        plantumlJarPath.data(),exitCode);
+      //printf("*** running: %s %s outDir:%s %s\n",pumlExe.data(),pumlArgs.data(),outDir,outFile);
+      msg("Running PlantUML on generated file %s.pu\n",baseName);
+      portable_sysTimerStart();
+      if ((exitCode=portable_system(pumlExe,pumlArgs,FALSE))!=0)
+      {
+        err("Problems running PlantUML. Verify that the command 'java -jar \"%splantuml.jar\" -h' works from the command line. Exit code: %d\n",
+            plantumlJarPath.data(),exitCode);
+      }
+      else if (Config_getBool("DOT_CLEANUP"))
+      {
+        QFile(QCString(baseName)+".pu").remove();
+      }
+      portable_sysTimerStop();
   }
-  else if (Config_getBool("DOT_CLEANUP"))
-  {
-    QFile(QCString(baseName)+".pu").remove();
-  }
-  portable_sysTimerStop();
+
   if ( (format==PUML_EPS) && (Config_getBool("USE_PDFLATEX")) )
   {
     QCString epstopdfArgs(maxCmdLine);
@@ -122,5 +128,98 @@ void generatePlantUMLOutput(const char *baseName,const char *outDir,PlantUMLOutp
     }
     portable_sysTimerStop();
   }
+}
+
+void generatePlantUMLOutput(const QList<QCString> &baseNames,const char *outDir,PlantUMLOutputFormat format)
+{
+    static QCString plantumlJarPath = Config_getString("PLANTUML_JAR_PATH");
+
+    QCString pumlExe = "java";
+    QCString pumlArgs = "";
+
+    QStrList &pumlIncludePathList = Config_getList("PLANTUML_INCLUDE_PATH");
+    char *s=pumlIncludePathList.first();
+    if (s)
+    {
+      pumlArgs += "-Dplantuml.include.path=\"";
+      pumlArgs += s;
+      s = pumlIncludePathList.next();
+    }
+    while (s)
+    {
+      pumlArgs += portable_pathListSeparator();
+      pumlArgs += s;
+      s = pumlIncludePathList.next();
+    }
+    if (pumlIncludePathList.first()) pumlArgs += "\" ";
+    pumlArgs += "-Djava.awt.headless=true -jar \""+plantumlJarPath+"plantuml.jar\" ";
+    pumlArgs+="-o \"";
+    pumlArgs+=outDir;
+    pumlArgs+="\" ";
+    QCString extension;
+    switch (format)
+    {
+      case PUML_BITMAP:
+        pumlArgs+="-tpng";
+        extension=".png";
+        break;
+      case PUML_EPS:
+        pumlArgs+="-teps";
+        extension=".eps";
+        break;
+      case PUML_SVG:
+        pumlArgs+="-tsvg";
+        extension=".svg";
+        break;
+    }
+
+    QListIterator<QCString> it(baseNames);
+    QCString *filename;
+    for ( it.toFirst(); (filename=it.current()); ++it )
+    {
+        pumlArgs+=" \"";
+        pumlArgs+=filename->data();
+        pumlArgs+=".pu\" ";
+    }
+
+    pumlArgs+="-charset " + Config_getString("INPUT_ENCODING") + " ";
+    int exitCode;
+    if (!plantumlJarPath.isEmpty())
+    {
+        //printf("*** running: %s %s outDir:%s %s\n",pumlExe.data(),pumlArgs.data(),outDir,outFile);
+        for ( it.toFirst(); (filename=it.current()); ++it )
+        {
+            msg("Running PlantUML on generated file %s.pu\n",filename->data());
+        }
+        portable_sysTimerStart();
+        if ((exitCode=portable_system(pumlExe,pumlArgs,FALSE))!=0)
+        {
+          err("Problems running PlantUML. Verify that the command 'java -jar \"%splantuml.jar\" -h' works from the command line. Exit code: %d\n",
+              plantumlJarPath.data(),exitCode);
+        }
+        else if (Config_getBool("DOT_CLEANUP"))
+        {
+            for ( it.toFirst(); (filename=it.current()); ++it )
+            {
+                QFile(QCString(*filename)+".pu").remove();
+            }
+        }
+        portable_sysTimerStop();
+    }
+
+    if ( (format==PUML_EPS) && (Config_getBool("USE_PDFLATEX")) )
+    {
+        for ( it.toFirst(); (filename=it.current()); ++it )
+        {
+            QCString epstopdfArgs(maxCmdLine);
+            epstopdfArgs.sprintf("\"%s.eps\" --outfile=\"%s.pdf\"",filename->data(),filename->data());
+            portable_sysTimerStart();
+            if ((exitCode=portable_system("epstopdf",epstopdfArgs))!=0)
+            {
+              err("Problems running epstopdf. Check your TeX installation! Exit code: %d\n",exitCode);
+            }
+        }
+      portable_sysTimerStop();
+    }
 }
 

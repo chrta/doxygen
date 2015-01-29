@@ -155,6 +155,27 @@ HtmlDocVisitor::HtmlDocVisitor(FTextStream &t,CodeOutputInterface &ci,
   if (ctx) m_langExt=ctx->getDefFileExtension();
 }
 
+HtmlDocVisitor::~HtmlDocVisitor()
+{
+    QListIterator<QCString> it(m_plantUmlFiles);
+
+    QCString outDir = Config_getString("HTML_OUTPUT");
+    QCString imgExt = Config_getEnum("DOT_IMAGE_FORMAT");
+    PlantUMLOutputFormat outputFormat = PUML_BITMAP;
+
+    if (imgExt=="svg")
+    {
+        outputFormat = PUML_SVG;
+    }
+
+    generatePlantUMLOutput(m_plantUmlFiles,outDir,outputFormat);
+    QCString *filename;
+    for ( it.toFirst(); (filename=it.current()); ++it )
+    {
+        delete filename;
+    }
+}
+
   //--------------------------------------
   // visitor functions for leaf nodes
   //--------------------------------------
@@ -2048,7 +2069,6 @@ void HtmlDocVisitor::writePlantUMLFile(const QCString &fileName,
   static QCString imgExt = Config_getEnum("DOT_IMAGE_FORMAT");
   if (imgExt=="svg")
   {
-    generatePlantUMLOutput(fileName,outDir,PUML_SVG);
     //m_t << "<iframe scrolling=\"no\" frameborder=\"0\" src=\"" << relPath << baseName << ".svg" << "\" />" << endl;
     //m_t << "<p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p>";
     //m_t << "</iframe>" << endl;
@@ -2056,9 +2076,10 @@ void HtmlDocVisitor::writePlantUMLFile(const QCString &fileName,
   }
   else
   {
-    generatePlantUMLOutput(fileName,outDir,PUML_BITMAP);
     m_t << "<img src=\"" << relPath << baseName << ".png" << "\" />" << endl;
   }
+
+  m_plantUmlFiles.append(new QCString(fileName));
 }
 
 /** Used for items found inside a paragraph, which due to XHTML restrictions
